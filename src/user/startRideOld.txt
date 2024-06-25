@@ -1,0 +1,68 @@
+import React, { useEffect, useState } from 'react';
+import { GoogleMap, Marker, LoadScript, DirectionsRenderer } from '@react-google-maps/api';
+
+const StartRide = () => {
+  const [startPosition] = useState({ lat: 28.6009921, lng: 77.0795096 });
+  const [endPosition] = useState({ lat: 28.6011237, lng: 77.0762686 });
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [directions, setDirections] = useState(null);
+  const [mapLoaded, setMapLoaded] = useState(false); // Track whether the map is loaded
+
+  useEffect(() => {
+    // Get current location
+    const watchId = navigator.geolocation.watchPosition(
+      position => {
+        const { latitude, longitude } = position.coords;
+        setCurrentLocation({ lat: latitude, lng: longitude });
+      },
+      error => {
+        console.error('Error getting user location:', error);
+      }
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId); // Clean up watch on unmount
+    };
+  }, []);
+
+  useEffect(() => {
+    // Fetch directions when both start and end positions are available and the map is loaded
+    if (startPosition && endPosition && mapLoaded) {
+      const directionsService = new window.google.maps.DirectionsService();
+      directionsService.route(
+        {
+          origin: startPosition,
+          destination: endPosition,
+          travelMode: 'DRIVING',
+        },
+        (result, status) => {
+          if (status === 'OK') {
+            setDirections(result);
+          } else {
+            console.error('Error fetching directions:', status);
+          }
+        }
+      );
+    }
+  }, [startPosition, endPosition, mapLoaded]);
+
+  return (
+    <LoadScript
+      googleMapsApiKey="AIzaSyDYsdaR0zrPsBDeuyCKFH_4PuCUyWcQ2mE"
+      onLoad={() => setMapLoaded(true)} // Set mapLoaded to true when the map is loaded
+    >
+      <GoogleMap
+        mapContainerStyle={{ width: '100%', height: '100vh' }}
+        center={currentLocation || startPosition}
+        zoom={15}
+      >
+        <Marker position={startPosition} />
+        <Marker position={endPosition} />
+        {currentLocation && <Marker position={currentLocation} icon={{ url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' }} />}
+        {directions && <DirectionsRenderer directions={directions} />}
+      </GoogleMap>
+    </LoadScript>
+  );
+};
+
+export default StartRide;
